@@ -119,6 +119,81 @@ void Game::onRightClick(int /*px*/, int /*py*/) {
                     : TowerType::Basic;
 }
 
+// ---------- Save / load -----------------------------------------------------
+
+std::string Game::saveState() const {
+    std::ostringstream o;
+    o << "{\"lives\":" << m_state.lives
+      << ",\"gold\":"  << m_state.gold
+      << ",\"wave\":"  << m_state.wave
+      << ",\"towers\":[";
+    for (size_t i = 0; i < m_towers.size(); ++i) {
+        if (i) o << ',';
+        const auto& t = m_towers[i];
+        int col = static_cast<int>(t.pos.x / m_map.tileSize);
+        int row = static_cast<int>(t.pos.y / m_map.tileSize);
+        o << "{\"col\":" << col
+          << ",\"row\":" << row
+          << ",\"type\":" << static_cast<int>(t.type) << '}';
+    }
+    o << "]}";
+    return o.str();
+}
+
+bool Game::loadState(const std::string& json) {
+    // Helper: read first integer after "key": in a string
+    auto readInt = [](const std::string& src, const std::string& key, int fallback) -> int {
+        const std::string needle = "\"" + key + "\":";
+        auto pos = src.find(needle);
+        if (pos == std::string::npos) return fallback;
+        try { return std::stoi(src.substr(pos + needle.size())); }
+        catch (...) { return fallback; }
+    };
+
+    const int lives = readInt(json, "lives", -1);
+    const int gold  = readInt(json, "gold",  -1);
+    const int wave  = readInt(json, "wave",  -1);
+    if (lives < 0 || gold < 0 || wave < 0) return false;
+
+    m_towers.clear();
+    m_enemies.clear();
+    m_projectiles.clear();
+    m_map = Map(m_map.cols, m_map.rows, m_map.tileSize);
+
+    m_state          = {lives, gold, wave, true, false};
+    m_spawnTimer     = 0.0f;
+    m_waveTimer      = 5.0f;
+    m_enemiesToSpawn = 0;
+
+    // Parse the "towers":[{...},...] array
+    const std::string arrKey = "\"towers\":[";
+    auto arrPos = json.find(arrKey);
+    if (arrPos != std::string::npos) {
+        arrPos += arrKey.size();
+        const auto arrEnd = json.find(']', arrPos);
+        const std::string arr = json.substr(arrPos, arrEnd - arrPos);
+        std::string::size_type pos = 0;
+        while ((pos = arr.find('{', pos)) != std::string::npos) {
+            auto end = arr.find('}', pos);
+            if (end == std::string::npos) break;
+            const std::string obj = arr.substr(pos, end - pos + 1);
+            pos = end + 1;
+
+            const int col  = readInt(obj, "col",  -1);
+            const int row  = readInt(obj, "row",  -1);
+            const int type = readInt(obj, "type", -1);
+            if (col < 0 || row < 0 || type < 0) continue;
+            if (col >= m_map.cols || row >= m_map.rows) continue;
+            if (!m_map.canPlaceTower(col, row)) continue;
+
+            const TowerType tt = (type == 1) ? TowerType::Sniper : TowerType::Basic;
+            m_towers.push_back(Tower(m_map.tileCenter(col, row), tt));
+            m_map.set(col, row, Tile::Tower);
+        }
+    }
+    return true;
+}
+
 // ---------- JSON render snapshot --------------------------------------------
 
 std::string Game::getRenderData() const {

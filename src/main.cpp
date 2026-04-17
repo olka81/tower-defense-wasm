@@ -43,6 +43,18 @@ std::string game_state() {
     return o.str();
 }
 
+// Returns a JSON snapshot of the full game state (for Electron save/load)
+std::string game_save_state() {
+    if (!g_game) return "{}";
+    return g_game->saveState();
+}
+
+// Restores game state from a saveState() JSON string; returns true on success
+bool game_load_state(const std::string& json) {
+    if (!g_game) return false;
+    return g_game->loadState(json);
+}
+
 EMSCRIPTEN_BINDINGS(tower_defense) {
     emscripten::function("game_init",        &game_init);
     emscripten::function("game_update",      &game_update);
@@ -50,4 +62,6 @@ EMSCRIPTEN_BINDINGS(tower_defense) {
     emscripten::function("game_right_click", &game_right_click);
     emscripten::function("game_render_data", &game_render_data);
     emscripten::function("game_state",       &game_state);
+    emscripten::function("game_save_state",  &game_save_state);
+    emscripten::function("game_load_state",  &game_load_state);
 }

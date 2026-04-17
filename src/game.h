@@ -25,6 +25,11 @@ public:
     // Returns JSON snapshot of all renderable entities for the JS layer
     std::string getRenderData() const;
 
+    // Serialise tower layout + HUD state to JSON (for Electron save)
+    std::string saveState() const;
+    // Restore from saveState() JSON; returns false on parse error
+    bool loadState(const std::string& json);
+
     const GameState& state() const { return m_state; }
     TowerType selectedTower() const { return m_selectedTower; }
 

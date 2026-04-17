@@ -1,7 +1,7 @@
 /**
  * game.js — Canvas renderer + game loop
  *
- * The C++ core (tower_defense.wasm) exposes six functions via Emscripten
+ * The C++ core (tower_defense.wasm) exposes eight functions via Emscripten
  * bindings. This file owns everything visual and the RAF loop.
  *
  *   Module.game_init(w, h)          — create game world
@@ -10,6 +10,8 @@
  *   Module.game_right_click(x, y)   — toggle tower type
  *   Module.game_render_data()       — JSON snapshot → draw
  *   Module.game_state()             — JSON HUD data
+ *   Module.game_save_state()        — JSON for save file (Electron)
+ *   Module.game_load_state(json)    — restore from save file (Electron)
  */
 
 'use strict';
@@ -69,10 +71,12 @@ TowerDefense().then(Module => {
     );
   });
 
-  // Game loop
-  let lastTime = null;
+  // ---- Game loop (restartable) ---------------------------------------------
+  let loopActive = true;
+  let lastTime   = null;
 
   function loop(timestamp) {
+    if (!loopActive) return;
     if (lastTime === null) lastTime = timestamp;
     const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
     lastTime = timestamp;
@@ -88,11 +92,48 @@ TowerDefense().then(Module => {
     if (!state.gameOver) {
       requestAnimationFrame(loop);
     } else {
+      loopActive = false;
       drawGameOver(ctx);
     }
   }
 
   requestAnimationFrame(loop);
+
+  // ---- Electron save / load ------------------------------------------------
+  if (window.electronAPI?.isElectron) {
+    document.getElementById('electron-controls').style.display = 'flex';
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const json   = Module.game_save_state();
+      const result = await window.electronAPI.saveState(json);
+      showStatus(result.success ? 'Game saved!' : 'Save cancelled.');
+    });
+
+    document.getElementById('btn-load').addEventListener('click', async () => {
+      const result = await window.electronAPI.loadState();
+      if (!result.success) return;
+
+      loopActive = false;
+      const ok = Module.game_load_state(result.data);
+      if (ok) {
+        showStatus('Game loaded!');
+        lastTime   = null;
+        loopActive = true;
+        requestAnimationFrame(loop);
+      } else {
+        showStatus('Load failed — invalid save file.');
+        // Resume whatever was running before
+        loopActive = true;
+        requestAnimationFrame(loop);
+      }
+    });
+  }
+
+  function showStatus(msg) {
+    elStatus.textContent = msg;
+    setTimeout(() => { elStatus.textContent = 'Running'; }, 2500);
+  }
+
 }).catch(err => {
   elStatus.textContent = 'Failed to load WASM: ' + err;
   console.error(err);

@@ -1,6 +1,9 @@
 # Build output
 build/
 
+# Node / Electron
+node_modules/
+
 # Emscripten-generated files
 web/tower_defense.js
 web/tower_defense.wasm

@@ -1,0 +1,14 @@
+{
+  "name": "tower-defense-wasm",
+  "version": "1.0.0",
+  "description": "Tower Defense in C++/WebAssembly — playable in-browser or via Electron",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-wasm": "wsl bash -c \"cd /mnt/d/Code/tower-defense-wasm && ./build.sh\"",
+    "build-and-run": "npm run build-wasm && npm start"
+  },
+  "devDependencies": {
+    "electron": "^41.2.1"
+  }
+}

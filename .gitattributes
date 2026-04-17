@@ -1,0 +1,5 @@
+# Always check out shell scripts with LF so they run in WSL/Linux without CRLF errors
+*.sh    text eol=lf
+
+# Default: normalize line endings to LF in the repo, CRLF on Windows checkout
+*       text=auto

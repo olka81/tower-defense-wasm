@@ -20,6 +20,13 @@
     <canvas id="canvas" width="768" height="576"></canvas>
 
     <p id="hint">Left-click: place tower &nbsp;|&nbsp; Right-click: toggle Basic / Sniper</p>
+
+    <!-- Shown only when running inside Electron -->
+    <div id="electron-controls" style="display:none">
+      <button id="btn-save">Save Game</button>
+      <button id="btn-load">Load Game</button>
+    </div>
+
     <div id="status">Loading WASM…</div>
   </div>
 
